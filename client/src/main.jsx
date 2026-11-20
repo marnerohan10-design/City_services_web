@@ -5,6 +5,12 @@ import axios from'axios';
 import{Activity,ArrowRight,BarChart3,CheckCircle2,Clock,ClipboardList,Download,FileText,Home,ImagePlus,LogOut,MapPin,Menu,Plus,Search,ShieldCheck,Trash2,Construction,Lightbulb,Leaf,Building2,X,Droplet}from'lucide-react';
 import{BarChart,Bar,XAxis,YAxis,Tooltip,ResponsiveContainer,CartesianGrid,PieChart,Pie,Cell}from'recharts';
 import './style.css';
+const authSlides=[
+{src:'/images/lavasa-waterfront-01.png',alt:'Lavasa waterfront homes beside the lake and green hills'},
+{src:'/images/lavasa-waterfront-02.png',alt:'Colorful waterfront buildings reflected along the Lavasa lake'},
+{src:'/images/lavasa-waterfront-03.png',alt:'Lavasa lakeside architecture with hills in the background'},
+{src:'/images/lavasa-waterfront-04.png',alt:'Lavasa buildings and lakeshore at dusk'}
+];
 const API=axios.create({baseURL:'http://localhost:5000/api'});API.interceptors.request.use(c=>{const t=localStorage.getItem('lc_token');if(t)c.headers.Authorization=`Bearer ${t}`;return c});
 const services=[['Water Supply','Water leaks, broken pipes and supply issues','droplet'],['Roads & Potholes','Damaged roads, potholes and footpaths','road'],['Waste Management','Missed collection and overflowing bins','waste'],['Street Lights','Faulty or damaged street lights','light'],['Drainage & Sewage','Blocked drains and sewage overflow','drain'],['Parks & Public Spaces','Damaged public spaces and facilities','park'],['Electricity','Public electrical infrastructure issues','power'],['Other','Anything else affecting the city','other']];
 function App(){const[auth,setAuth]=useState(()=>JSON.parse(localStorage.getItem('lc_user')||'null'));const[page,setPage]=useState('overview');const[complaints,setComplaints]=useState([]);const[overview,setOverview]=useState({total:0,pending:0,processing:0,completed:0,byService:[],monthly:[]});const[busy,setBusy]=useState(false);const[toast,setToast]=useState('');const[mobile,setMobile]=useState(false);const[filter,setFilter]=useState('All');const[search,setSearch]=useState('');const[month,setMonth]=useState(new Date().toISOString().slice(0,7));const[modal,setModal]=useState(false);const[detail,setDetail]=useState(null);
@@ -24,7 +30,65 @@ return <div className="app"><aside className={`sidebar ${mobile?'open':''}`}><di
 {page==='reports'&&<><div className="welcome"><div><div className="eyebrow">INSIGHTS & EXPORTS</div><h1>Reports & analytics</h1><p>Understand service demand and download monthly summaries.</p></div></div><section className="panel report-panel"><div><h3>Monthly service report</h3><p>Choose a month to export complaints and status information.</p></div><div className="report-actions"><input type="month" value={month} onChange={e=>setMonth(e.target.value)}/><button className="primary" onClick={()=>downloadReport('xlsx',month)}><Download size={16}/> Excel</button><button className="outline" onClick={()=>downloadReport('pdf',month)}><FileText size={16}/> PDF</button></div></section><div className="stats-grid compact">{[['Total requests',overview.total],['Pending',overview.pending],['Processing',overview.processing],['Completed',overview.completed]].map(([l,v])=><div className="stat-card" key={l}><span>{l}</span><strong>{v}</strong></div>)}</div><section className="panel"><div className="panel-head"><div><h3>Service breakdown</h3><p>Number of reports received by category</p></div></div><div className="chart tall"><ResponsiveContainer width="100%" height="100%"><BarChart data={overview.byService} layout="vertical" margin={{left:20,right:25}}><CartesianGrid strokeDasharray="3 3" horizontal={false}/><XAxis type="number" allowDecimals={false}/><YAxis type="category" dataKey="service" width={145} tick={{fontSize:11}}/><Tooltip/><Bar dataKey="count" fill="#2c7891" radius={[0,5,5,0]}/></BarChart></ResponsiveContainer></div></section></>}
 </div></main>{modal&&<NewComplaint close={()=>setModal(false)} done={()=>{setModal(false);load();setPage('myrequests');notify('Your request has been submitted successfully.')}} notify={notify}/ >}{detail&&<ComplaintDetail item={detail} admin={isAdmin} close={()=>setDetail(null)} updated={()=>{setDetail(null);load();notify('Complaint status updated.')}}/>}{toast&&<div className="toast"><CheckCircle2 size={17}/>{toast}</div>}</div>}
 function downloadReport(type,month){API.get(`/admin/reports.${type}`,{params:{month},responseType:'blob'}).then(r=>{const url=URL.createObjectURL(r.data);const a=document.createElement('a');a.href=url;a.download=`lavasa-report-${month}.${type}`;a.click();URL.revokeObjectURL(url)}).catch(()=>alert('Could not generate report.'));}
-function Auth({onAuth}){const[mode,setMode]=useState('login');const[name,setName]=useState('');const[email,setEmail]=useState('');const[password,setPassword]=useState('');const[phone,setPhone]=useState('');const[error,setError]=useState('');const[busy,setBusy]=useState(false);const submit=async e=>{e.preventDefault();setBusy(true);setError('');try{const r=await API.post(`/auth/${mode}`,{name,email,password,phone});localStorage.setItem('lc_token',r.data.token);localStorage.setItem('lc_user',JSON.stringify(r.data.user));onAuth(r.data.user)}catch(e){setError(e.response?.data?.message||'Unable to sign in. Please try again.')}finally{setBusy(false)}};return <div className="auth-page"><div className="auth-visual"><div className="auth-brand"><div className="brand-icon"><Building2/></div><b>Lavasa<span>Connect</span></b></div><div className="auth-copy"><div className="eyebrow">YOUR CITY. YOUR VOICE.</div><h1>Building a better<br/><em>Lavasa, together.</em></h1><p>One simple place to report local issues, connect with city services and make a difference in your community.</p><div className="auth-points"><span><CheckCircle2/> Report issues in minutes</span><span><MapPin/> Share precise locations</span><span><Activity/> Track every update</span></div></div><div className="auth-foot">LAVASA CITY SERVICES · COMMUNITY FIRST</div></div><div className="auth-form-side"><form className="auth-form" onSubmit={submit}><div className="form-kicker">{mode==='login'?'WELCOME BACK':'GET STARTED'}</div><h2>{mode==='login'?'Sign in to your account':'Create your account'}</h2><p>{mode==='login'?'Enter your details to access the city portal.':'Join the Lavasa community services portal.'}</p>{mode==='register'&&<label>Full name<input required value={name} onChange={e=>setName(e.target.value)} placeholder="Your full name"/></label>}<label>Email address<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label>{mode==='register'&&<label>Phone number <span className="optional">(optional)</span><input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Your contact number"/></label>}<label>Password<input type="password" minLength="8" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="At least 8 characters"/></label>{error&&<div className="error">{error}</div>}<button className="primary wide" disabled={busy}>{busy?'Please wait...':mode==='login'?'Sign in':'Create account'} <ArrowRight size={17}/></button><div className="auth-switch">{mode==='login'?"Don't have an account?":"Already registered?"} <button type="button" onClick={()=>{setMode(mode==='login'?'register':'login');setError('')}}>{mode==='login'?'Create account':'Sign in'}</button></div><div className="secure-note"><ShieldCheck size={15}/> Your information is securely protected.</div></form></div></div>}
+function Auth({onAuth}){
+const[mode,setMode]=useState('login');
+const[name,setName]=useState('');
+const[email,setEmail]=useState('');
+const[password,setPassword]=useState('');
+const[phone,setPhone]=useState('');
+const[error,setError]=useState('');
+const[busy,setBusy]=useState(false);
+const[activeSlide,setActiveSlide]=useState(0);
+const[paused,setPaused]=useState(false);
+useEffect(()=>{
+if(paused||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+const timer=window.setInterval(()=>setActiveSlide(current=>(current+1)%authSlides.length),5500);
+return()=>window.clearInterval(timer);
+},[paused]);
+const submit=async e=>{
+e.preventDefault();
+setBusy(true);
+setError('');
+try{
+const r=await API.post(`/auth/${mode}`,{name,email,password,phone});
+localStorage.setItem('lc_token',r.data.token);
+localStorage.setItem('lc_user',JSON.stringify(r.data.user));
+onAuth(r.data.user);
+}catch(e){
+setError(e.response?.data?.message||'Unable to sign in. Please try again.');
+}finally{
+setBusy(false);
+}
+};
+return <div className="auth-page">
+<div className="auth-visual" onMouseEnter={()=>setPaused(true)} onMouseLeave={()=>setPaused(false)}>
+<div className="auth-slideshow" role="region" aria-roledescription="carousel" aria-label="Scenes from Lavasa">
+{authSlides.map((slide,index)=><div className={`auth-slide ${activeSlide===index?'is-active':''}`} aria-hidden={activeSlide!==index} key={slide.src}>
+<img src={slide.src} alt={slide.alt}/>
+</div>)}
+</div>
+<div className="auth-slide-controls" role="group" aria-label="Choose a Lavasa scene">
+{authSlides.map((slide,index)=><button type="button" key={slide.src} aria-label={`Show scene ${index+1}: ${slide.alt}`} aria-pressed={activeSlide===index} onClick={()=>setActiveSlide(index)}><span className="sr-only">Scene {index+1}</span></button>)}
+</div>
+<div className="auth-brand"><div className="brand-icon"><Building2/></div><b>Lavasa<span>Connect</span></b></div>
+<div className="auth-copy"><div className="eyebrow">YOUR CITY. YOUR VOICE.</div><h1>Building a better<br/><em>Lavasa, together.</em></h1><p>One simple place to report local issues, connect with city services and make a difference in your community.</p><div className="auth-points"><span><CheckCircle2/> Report issues in minutes</span><span><MapPin/> Share precise locations</span><span><Activity/> Track every update</span></div></div>
+<div className="auth-foot">LAVASA CITY SERVICES · COMMUNITY FIRST</div>
+</div>
+<div className="auth-form-side"><form className="auth-form" onSubmit={submit}>
+<div className="form-kicker">{mode==='login'?'WELCOME BACK':'GET STARTED'}</div>
+<h2>{mode==='login'?'Sign in to your account':'Create your account'}</h2>
+<p>{mode==='login'?'Enter your details to access the city portal.':'Join the Lavasa community services portal.'}</p>
+{mode==='register'&&<label>Full name<input required value={name} onChange={e=>setName(e.target.value)} placeholder="Your full name"/></label>}
+<label>Email address<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label>
+{mode==='register'&&<label>Phone number <span className="optional">(optional)</span><input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Your contact number"/></label>}
+<label>Password<input type="password" minLength="8" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="At least 8 characters"/></label>
+{error&&<div className="error">{error}</div>}
+<button className="primary wide" disabled={busy}>{busy?'Please wait...':mode==='login'?'Sign in':'Create account'} <ArrowRight size={17}/></button>
+<div className="auth-switch">{mode==='login'?"Don't have an account?":"Already registered?"} <button type="button" onClick={()=>{setMode(mode==='login'?'register':'login');setError('')}}>{mode==='login'?'Create account':'Sign in'}</button></div>
+<div className="secure-note"><ShieldCheck size={15}/> Your information is securely protected.</div>
+</form></div>
+</div>
+}
 function ServiceCard({item,index,onClick}){const icons=[Droplet,Construction,Trash2,Lightbulb,Activity,Leaf,Activity,Building2];const I=icons[index]||Building2;return <button className="service-card" onClick={onClick}><div className={`service-icon si-${index}`}><I size={21}/></div><div><b>{item[0]}</b><p>{item[1]}</p></div><ArrowRight className="service-arrow" size={17}/></button>}
 function ComplaintTable({rows,admin=false,onSelect}){if(!rows.length)return <div className="empty"><ClipboardList size={30}/><b>No requests yet</b><p>{admin?'New resident reports will appear here.':'Your submitted requests will appear here.'}</p></div>;return <div className="table-wrap"><table><thead><tr><th>REQUEST</th><th>SERVICE</th>{admin&&<th>RESIDENT</th>}<th>DATE</th><th>STATUS</th><th></th></tr></thead><tbody>{rows.map(c=><tr key={c.id} onClick={()=>onSelect(c)}><td><b>#{String(c.id).padStart(4,'0')} · {c.title}</b><small>{c.address||'Location not provided'}</small></td><td>{c.service}</td>{admin&&<td>{c.user_name||'Resident'}</td>}<td>{new Date(c.created_at+'Z').toLocaleDateString()}</td><td><Status status={c.status}/></td><td><button className="row-arrow"><ArrowRight size={16}/></button></td></tr>)}</tbody></table></div>}
 function Status({status}){return <span className={`status status-${status?.toLowerCase()}`}>{status}</span>}
