@@ -1,0 +1,5 @@
+node_modules/
+client/dist/
+server/lavasa.sqlite*
+server/uploads/*
+server/.env
